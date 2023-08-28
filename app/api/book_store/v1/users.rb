@@ -21,7 +21,7 @@ module BookStore
         end
         post do
 
-          user = User.new({ name:params[:name], email:params[:email],password:params[:password]})
+          user = User.new(params)
 
           present user if user.save
 
@@ -41,10 +41,8 @@ module BookStore
           if @user && @user.authenticate(params[:password])
             @token = @user.signed_id(purpose: "login", expires_in: 60.minutes)
             @user.token = @token
-            @user.save
-            debugger
+            @user.save!
             present user: @user, token: @token
-
           end
 
         end
@@ -53,10 +51,59 @@ module BookStore
         desc 'logout user'
         get 'logout' do
           @user = User.find_signed(request.headers["Authorization"], purpose: "login")
+          error!('Forbidden', :forbidden) if @user.nil?
           @user.token = nil
           @user.save
           present @user
         end
+
+
+        desc 'password change'
+        params do
+          requires :old_password, type: String
+          requires :new_password, type: String
+          requires :confirm_password, type: String
+        end
+        put 'change_password' do
+          @user = User.find_signed(request.headers["Authorization"], purpose: "login")
+          error!('not authorized', :unauthorized) if @user.nil?
+
+          if @user && @user.authenticate(params[:old_password])
+            @user.update(password: params[:new_password])
+            { message: 'Password changed successfully' }
+          else
+            error!('Invalid credentials', 401)
+          end
+
+        end
+
+
+
+        desc 'reset password link create'
+        params do
+          requires :email , type:String
+        end
+        post 'forget_password' do
+
+          @user = User.find_by(email: params[:email])
+          error!('not found', :not_found) if @user.nil?
+          @token = @user.signed_id(purpose: "reset password", expires_in: 15.minutes)
+
+          UserMailer.password_reset(@token).deliver_now
+
+
+        end
+
+        desc 'reset password'
+        params do
+          requires :token , type:String
+        end
+        put 'reset_password' do
+          puts 'status'
+        end
+
+
+
 
       end
     end

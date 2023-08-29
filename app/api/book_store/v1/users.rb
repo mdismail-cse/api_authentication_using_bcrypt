@@ -87,9 +87,11 @@ module BookStore
 
           @user = User.find_by(email: params[:email])
           error!('not found', :not_found) if @user.nil?
-          @token = @user.signed_id(purpose: "reset password", expires_in: 15.minutes)
+          @token = @user.signed_id(purpose: "reset password", expires_in: 60.minutes)
 
           UserMailer.password_reset(@token).deliver_now
+
+          present @token
 
 
         end
@@ -97,9 +99,21 @@ module BookStore
         desc 'reset password'
         params do
           requires :token , type:String
+          requires :new_password , type:String
+          requires :confirm_password , type:String
         end
         put 'reset_password' do
-          puts 'status'
+          @user = User.find_signed!(params[:token], purpose: "reset password")
+          error!('unauthorized', :unauthorized) if @user.nil?
+          # present params[:token]
+          if params[:new_password] == params[:confirm_password]
+            @user.update(password: params[:new_password])
+            status 200
+            {message: 'password successfully updated'}
+          else
+            error!('Failed to update', 500)
+          end
+
         end
 
 

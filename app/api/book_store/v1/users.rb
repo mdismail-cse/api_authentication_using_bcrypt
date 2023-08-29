@@ -27,7 +27,9 @@ module BookStore
             @token = user.signed_id(purpose: "activation", expires_in: 60.minutes)
 
             UserMailer.account_activation(@token, user).deliver_now
-            {message: 'mail has been sent'}
+            status 200
+
+            present user, with: BookStore::Entities::UserCreate
 
           else
             error!('Not accepted', 406)
@@ -51,8 +53,8 @@ module BookStore
             @token = @user.signed_id(purpose: "login", expires_in: 60.minutes)
             @user.token = @token
             @user.save!
-            present user: @user, token: @token
-
+            present @user, with: BookStore::Entities::User
+            # Api::Entities::User.represent(user)
           else
             error!('Failed to login account not activated ', 401)
           end
@@ -66,7 +68,7 @@ module BookStore
           error!('Forbidden', :forbidden) if @user.nil?
           @user.token = nil
           @user.save
-          present @user
+          present @user, with: BookStore::Entities::User
         end
 
 
@@ -83,6 +85,8 @@ module BookStore
           if @user && @user.authenticate(params[:old_password])
             @user.update(password: params[:new_password])
             { message: 'Password changed successfully' }
+            present @user, with: BookStore::Entities::User
+
           else
             error!('Invalid credentials', 401)
           end
@@ -134,19 +138,42 @@ module BookStore
           requires :token, type:String
         end
         put 'account_activation' do
-          debugger
+
           @user = User.find_signed!(params[:token], purpose: "activation")
           error!('unauthorized', :unauthorized) if @user.nil?
 
           @user.update(status: "active")
 
           status 200
-          {message: 'user activated'}
+          present @user, with: BookStore::Entities::Activation
 
         end
 
 
+        desc 'reconfirm account'
+        params do
+          requires :email, type:String
+        end
+        post 'reconfirm_account' do
+          @user = User.find_by(email: params[:email])
 
+          if @user.present? && @user.status == "inactive"
+
+            @token = @user.signed_id(purpose: "activation", expires_in: 60.minutes)
+            UserMailer.account_activation(@token, @user).deliver_now
+            status 200
+
+            present @user, with: BookStore::Entities::UserCreate
+          else
+            if @user.status == "active"
+              {message: "already activated"}
+            else
+
+            error!('not found', :unauthorized)
+            end
+          end
+
+        end
 
 
       end

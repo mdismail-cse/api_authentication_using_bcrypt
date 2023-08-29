@@ -23,7 +23,16 @@ module BookStore
 
           user = User.new(params)
 
-          present user if user.save
+          if user.save
+            @token = user.signed_id(purpose: "activation", expires_in: 60.minutes)
+
+            UserMailer.account_activation(@token, user).deliver_now
+            {message: 'mail has been sent'}
+
+          else
+            error!('Not accepted', 406)
+
+          end
 
         end
 
@@ -38,11 +47,14 @@ module BookStore
           @user = User.find_by(email: params[:email])
           error!('User not found', :not_found) if @user.nil?
 
-          if @user && @user.authenticate(params[:password])
+          if @user && @user.authenticate(params[:password]) && @user.status == "active"
             @token = @user.signed_id(purpose: "login", expires_in: 60.minutes)
             @user.token = @token
             @user.save!
             present user: @user, token: @token
+
+          else
+            error!('Failed to login account not activated ', 401)
           end
 
         end
@@ -89,7 +101,7 @@ module BookStore
           error!('not found', :not_found) if @user.nil?
           @token = @user.signed_id(purpose: "reset password", expires_in: 60.minutes)
 
-          UserMailer.password_reset(@token).deliver_now
+          UserMailer.password_reset(@token, @user).deliver_now
 
           present @token
 
@@ -115,6 +127,24 @@ module BookStore
           end
 
         end
+
+
+        desc 'account activation'
+        params do
+          requires :token, type:String
+        end
+        put 'account_activation' do
+          debugger
+          @user = User.find_signed!(params[:token], purpose: "activation")
+          error!('unauthorized', :unauthorized) if @user.nil?
+
+          @user.update(status: "active")
+
+          status 200
+          {message: 'user activated'}
+
+        end
+
 
 
 

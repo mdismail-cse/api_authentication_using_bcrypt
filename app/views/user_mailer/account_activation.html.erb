@@ -1,0 +1,8 @@
+<h1>User#account_activation</h1>
+
+<p>
+  here is your reset link
+
+
+  <%= link_to "reset password", "http://localhost:3000/api/v1/users/account_activation?token=#{@token}"%>
+</p>

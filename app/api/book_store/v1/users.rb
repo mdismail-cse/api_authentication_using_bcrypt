@@ -1,9 +1,11 @@
 module BookStore
   module V1
-    class Users < Grape::API
+    class Users < Base
       version 'v1', using: :path
       format :json
       prefix :api
+
+
       resource :users do
         desc 'Return list of books'
         get do
@@ -35,6 +37,9 @@ module BookStore
             error!('Not accepted', 406)
 
           end
+        rescue StandardError => error
+          Rails.logger.info "#{error.full_message}"
+          error!("Internal Server error", :internal_server_error)
 
         end
 
@@ -46,19 +51,22 @@ module BookStore
           requires :password, type: String
         end
         post 'login' do
-          @user = User.find_by(email: params[:email])
+          @user = User.find_by!(email: params[:email])
           error!('User not found', :not_found) if @user.nil?
 
-          if @user && @user.authenticate(params[:password]) && @user.status == "active"
-            @token = @user.signed_id(purpose: "login", expires_in: 60.minutes)
-            @user.token = @token
-            @user.save!
-            present @user, with: BookStore::Entities::User
-            # Api::Entities::User.represent(user)
-          else
-            error!('Failed to login account not activated ', 401)
-          end
+          # unless @user && @user.authenticate(params[:password]) && @user.status == "active"
+          #   error!('Failed to login account not activated ', 401)
+          # end
 
+          @token = @user.signed_id(purpose: "login", expires_in: 60.minutes)
+          @auth_token = AuthToken.new(user_id: @user.id, token: @token, expire_at: @user.created_at+60.minutes)
+          @auth_token.save!
+          present @auth_token, with: BookStore::Entities::Login
+            # Api::Entities::User.represent(user)
+
+
+        rescue StandardError => error
+          error!("Internal Server error", :internal_server_error)
         end
 
 
@@ -66,9 +74,15 @@ module BookStore
         get 'logout' do
           @user = User.find_signed(request.headers["Authorization"], purpose: "login")
           error!('Forbidden', :forbidden) if @user.nil?
-          @user.token = nil
-          @user.save
-          present @user, with: BookStore::Entities::User
+
+
+          @auth_token = @user.auth_tokens.where(token: request.headers["Authorization"])
+          error!('You are not logged in', :forbidden) if @auth_token.nil?
+          @auth_test = @user.auth_tokens.find_by(token: request.headers["Authorization"])
+          @auth_test.destroy
+          status 200
+          # present @user, with: BookStore::Entities::User
+
         end
 
 
@@ -91,6 +105,8 @@ module BookStore
             error!('Invalid credentials', 401)
           end
 
+        rescue StandardError => error
+          error!("#{error.message}", :internal_server_error)
         end
 
 
@@ -107,9 +123,10 @@ module BookStore
 
           UserMailer.password_reset(@token, @user).deliver_now
 
-          present @token
+          status 200
 
-
+        rescue StandardError => error
+          error!("#{error.message}", :internal_server_error)
         end
 
         desc 'reset password'
@@ -129,6 +146,8 @@ module BookStore
           else
             error!('Failed to update', 500)
           end
+        rescue StandardError => error
+          error!("Internal Server error", :internal_server_error)
 
         end
 
@@ -146,6 +165,8 @@ module BookStore
 
           status 200
           present @user, with: BookStore::Entities::Activation
+        rescue StandardError => error
+          error!("Internal Server error", :internal_server_error)
 
         end
 
@@ -172,6 +193,10 @@ module BookStore
             error!('not found', :unauthorized)
             end
           end
+
+        rescue StandardError => error
+          Rails.logger.info "#{error.full_message}"
+          error!("Internal Server error", :internal_server_error)
 
         end
 

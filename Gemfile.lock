@@ -150,6 +150,7 @@ GEM
       ruby2_keywords (~> 0.0.1)
     mustermann-grape (1.0.2)
       mustermann (>= 1.0.0)
+    mysql2 (0.5.5)
     net-imap (0.3.7)
       date
       net-protocol
@@ -237,7 +238,6 @@ GEM
       actionpack (>= 5.2)
       activesupport (>= 5.2)
       sprockets (>= 3.0.0)
-    sqlite3 (1.6.4-x86_64-linux)
     stimulus-rails (1.2.2)
       railties (>= 6.0.0)
     thor (1.2.2)
@@ -279,13 +279,13 @@ DEPENDENCIES
   grape_on_rails_routes
   importmap-rails
   jbuilder
+  mysql2
   puma (~> 5.0)
   rails (~> 7.0.7)
   redis (~> 4.0)
   rubocop
   selenium-webdriver
   sprockets-rails
-  sqlite3 (~> 1.4)
   stimulus-rails
   turbo-rails
   tzinfo-data

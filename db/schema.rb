@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_08_30_052737) do
+ActiveRecord::Schema[7.0].define(version: 2023_09_04_090721) do
   create_table "auth_tokens", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "token"
     t.datetime "expire_at"
@@ -20,15 +20,24 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_30_052737) do
     t.index ["user_id"], name: "index_auth_tokens_on_user_id"
   end
 
+  create_table "posts", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "title"
+    t.string "description"
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_posts_on_user_id"
+  end
+
   create_table "users", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "name"
     t.string "email"
     t.string "password_digest"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "token"
-    t.string "status", default: "inactive"
+    t.integer "ac_status", default: 0
   end
 
   add_foreign_key "auth_tokens", "users"
+  add_foreign_key "posts", "users"
 end

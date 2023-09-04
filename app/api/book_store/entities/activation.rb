@@ -4,7 +4,7 @@ module BookStore
     class Activation < Grape::Entity
       expose :name
       expose :email
-      expose :status
+      expose :ac_status
       expose :created_at
     end
   end

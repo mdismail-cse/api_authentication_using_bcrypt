@@ -79,3 +79,6 @@ group :test do
 end
 
 gem "grape-entity", "~> 1.0"
+# Gemfile
+gem 'faker'
+

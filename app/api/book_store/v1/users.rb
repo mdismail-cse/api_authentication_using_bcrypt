@@ -1,6 +1,9 @@
 module BookStore
   module V1
     class Users < Base
+
+      helpers BookStore::QueryParams::UserParams
+
       version 'v1', using: :path
       format :json
       prefix :api
@@ -17,53 +20,44 @@ module BookStore
 
         desc 'create a new user'
         params do
-          requires :name, type: String
-          requires :email, type: String
-          requires :password, type: String
+          use :create_user_params
         end
+        route_setting :authentication, optional: true
         post do
-
           user = User.new(params)
-
           if user.save
             @token = user.signed_id(purpose: "activation", expires_in: 60.minutes)
-
             UserMailer.account_activation(@token, user).deliver_now
             status 200
-
             present user, with: BookStore::Entities::UserCreate
-
           else
             error!('Not accepted', 406)
-
           end
         rescue StandardError => error
           Rails.logger.info "#{error.full_message}"
           error!("Internal Server error", :internal_server_error)
-
         end
 
 
 
         desc 'logging in'
         params do
-          requires :email, type: String
-          requires :password, type: String
+          use :user_login_params
         end
+        route_setting :authentication, optional: true
         post 'login' do
           @user = User.find_by!(email: params[:email])
           error!('User not found', :not_found) if @user.nil?
 
-          # unless @user && @user.authenticate(params[:password]) && @user.status == "active"
-          #   error!('Failed to login account not activated ', 401)
-          # end
+          unless @user && @user.authenticate(params[:password]) && @user.ac_status == "active"
+            error!('Failed to login account not activated ', 401)
+          end
 
           @token = @user.signed_id(purpose: "login", expires_in: 60.minutes)
-          @auth_token = AuthToken.new(user_id: @user.id, token: @token, expire_at: @user.created_at+60.minutes)
+          @auth_token = AuthToken.new(user_id: @user.id, token: @token, expire_at: DateTime.now+60.minutes)
+          # debugger
           @auth_token.save!
           present @auth_token, with: BookStore::Entities::Login
-            # Api::Entities::User.represent(user)
-
 
         rescue StandardError => error
           error!("Internal Server error", :internal_server_error)
@@ -73,8 +67,7 @@ module BookStore
         desc 'logout user'
         get 'logout' do
           @user = User.find_signed(request.headers["Authorization"], purpose: "login")
-          error!('Forbidden', :forbidden) if @user.nil?
-
+          error!('Unauthorized', :unauthorized) if @user.nil?
 
           @auth_token = @user.auth_tokens.where(token: request.headers["Authorization"])
           error!('You are not logged in', :forbidden) if @auth_token.nil?
@@ -88,13 +81,11 @@ module BookStore
 
         desc 'password change'
         params do
-          requires :old_password, type: String
-          requires :new_password, type: String
-          requires :confirm_password, type: String
+          use :change_user_password_params
         end
         put 'change_password' do
-          @user = User.find_signed(request.headers["Authorization"], purpose: "login")
-          error!('not authorized', :unauthorized) if @user.nil?
+          # @user = User.find_signed(request.headers["Authorization"], purpose: "login")
+          # error!('not authorized', :unauthorized) if @user.nil?
 
           if @user && @user.authenticate(params[:old_password])
             @user.update(password: params[:new_password])
@@ -109,20 +100,16 @@ module BookStore
           error!("#{error.message}", :internal_server_error)
         end
 
-
-
         desc 'reset password link create'
         params do
           requires :email , type:String
         end
+        route_setting :authentication, optional: true
         post 'forget_password' do
-
           @user = User.find_by(email: params[:email])
           error!('not found', :not_found) if @user.nil?
           @token = @user.signed_id(purpose: "reset password", expires_in: 60.minutes)
-
           UserMailer.password_reset(@token, @user).deliver_now
-
           status 200
 
         rescue StandardError => error
@@ -131,10 +118,9 @@ module BookStore
 
         desc 'reset password'
         params do
-          requires :token , type:String
-          requires :new_password , type:String
-          requires :confirm_password , type:String
+          use :reset_user_password_params
         end
+        route_setting :authentication, optional: true
         put 'reset_password' do
           @user = User.find_signed!(params[:token], purpose: "reset password")
           error!('unauthorized', :unauthorized) if @user.nil?
@@ -156,12 +142,13 @@ module BookStore
         params do
           requires :token, type:String
         end
+        route_setting :authentication, optional: true
         put 'account_activation' do
 
           @user = User.find_signed!(params[:token], purpose: "activation")
           error!('unauthorized', :unauthorized) if @user.nil?
 
-          @user.update(status: "active")
+          @user.update(ac_status: "active")
 
           status 200
           present @user, with: BookStore::Entities::Activation
@@ -175,10 +162,11 @@ module BookStore
         params do
           requires :email, type:String
         end
+        route_setting :authentication, optional: true
         post 'reconfirm_account' do
           @user = User.find_by(email: params[:email])
 
-          if @user.present? && @user.status == "inactive"
+          if @user.present? && @user.ac_status == "inactive"
 
             @token = @user.signed_id(purpose: "activation", expires_in: 60.minutes)
             UserMailer.account_activation(@token, @user).deliver_now
@@ -186,7 +174,7 @@ module BookStore
 
             present @user, with: BookStore::Entities::UserCreate
           else
-            if @user.status == "active"
+            if @user.ac_status == "active"
               {message: "already activated"}
             else
 

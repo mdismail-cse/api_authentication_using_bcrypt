@@ -4,7 +4,7 @@ module BookStore
     class UserCreate < Grape::Entity
       expose :name
       expose :email
-      expose :status
+      expose :ac_status
     end
   end
 end

@@ -5,7 +5,7 @@ module BookStore
       expose :name
       expose :email
       expose :token
-      expose :status
+      expose :ac_status
     end
   end
 end

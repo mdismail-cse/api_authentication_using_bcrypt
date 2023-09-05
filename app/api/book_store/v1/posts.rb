@@ -26,9 +26,11 @@ module BookStore
         end
         post do
           post = Post.new(title: params[:title], description: params[:description], user_id: @user.id)
-          post.save
+          post.save!
           present post, with: BookStore::Entities::PostCreate
 
+        rescue StandardError => error
+          error!("#{error.message}")
         end
 
         desc 'find a specific post'
@@ -36,7 +38,7 @@ module BookStore
           requires :post_id
         end
         post 'view' do
-          post = Post.find(params[:post_id])
+          post = Post.find_by(id: params[:post_id])
           error!('not found', 401 ) if post.nil?
 
           present post, with:BookStore::Entities::SinglePost
@@ -44,7 +46,34 @@ module BookStore
             error!("#{error.message}", :not_found)
         end
 
+        desc 'update post'
+        params do
+          requires :post_id
+          requires :title, type:String
+          requires :description, type:String
+        end
+        put do
+          post = Post.find_by(id: params[:post_id])
+          error!('not found', :not_found) if post.nil?
+          post.update!(title: params[:title], description: params[:description])
 
+          present post
+          rescue StandardError => error
+            error!("#{error.message}", :not_found)
+        end
+
+        desc 'delete a post'
+        params do
+          requires :post_id
+        end
+        delete do
+          post = Post.find(params[:post_id])
+          error!('not found', :not_found) if post.nil?
+          post.destroy
+          status 200
+          rescue StandardError => error
+           error!("#{error.message}", :not_found)
+        end
 
       end
 

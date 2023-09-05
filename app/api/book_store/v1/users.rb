@@ -53,8 +53,8 @@ module BookStore
             error!('Failed to login account not activated ', 401)
           end
 
-          @token = @user.signed_id(purpose: "login", expires_in: 60.minutes)
-          @auth_token = AuthToken.new(user_id: @user.id, token: @token, expire_at: DateTime.now+60.minutes)
+          @token = @user.signed_id(purpose: "login", expires_in: 1.months)
+          @auth_token = AuthToken.new(user_id: @user.id, token: @token, expire_at: DateTime.now+1.months)
           # debugger
           @auth_token.save!
           present @auth_token, with: BookStore::Entities::Login

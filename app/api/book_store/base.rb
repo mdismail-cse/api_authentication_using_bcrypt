@@ -15,5 +15,6 @@ module BookStore
 
     mount BookStore::V1::Users
     mount BookStore::V1::Posts
+    mount BookStore::V1::Comments
   end
 end

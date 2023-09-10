@@ -8,6 +8,10 @@ module BookStore
       else
         @user = User.find_signed(request.headers["Authorization"], purpose: "login")
         error!('not authorized', :unauthorized) if @user.nil?
+
+        @user_friend_request = @user.friends.where(status: "unaccepted")
+        @user_friends = @user.friends.where(status: "accepted")
+        # debugger
       end
 
     end
@@ -16,5 +20,6 @@ module BookStore
     mount BookStore::V1::Users
     mount BookStore::V1::Posts
     mount BookStore::V1::Comments
+    mount BookStore::V1::Friends
   end
 end

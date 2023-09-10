@@ -7,8 +7,9 @@ module BookStore
 
       resource :posts do
 
-        desc 'get all Post'
+        desc 'all post'
         get do
+          p = Post.last
           post = Post.all.order(user_id: :asc)
           present post
         end
@@ -18,7 +19,13 @@ module BookStore
         desc 'get only current user post'
         get 'mypost' do
           post = @user.posts
-          present post
+          friend = []
+          @user_friends.each do |x|
+            friend = friend << Post.where(user_id: x.user_friend)
+          end
+
+          present [post, friend]
+
         end
 
 

@@ -10,10 +10,12 @@ module BookStore
 
 
       resource :users do
-        desc 'Return list of books'
+        desc 'Return list of users'
         get do
           users = User.all
           present users
+
+
         end
 
 
@@ -90,8 +92,8 @@ module BookStore
           if @user && @user.authenticate(params[:old_password])
             @user.update(password: params[:new_password])
             { message: 'Password changed successfully' }
-            present @user, with: BookStore::Entities::User
-
+            # present @user, with: BookStore::Entities::User
+            status 200
           else
             error!('Invalid credentials', 401)
           end
@@ -172,7 +174,7 @@ module BookStore
             UserMailer.account_activation(@token, @user).deliver_now
             status 200
 
-            present @user, with: BookStore::Entities::UserCreate
+
           else
             if @user.ac_status == "active"
               {message: "already activated"}

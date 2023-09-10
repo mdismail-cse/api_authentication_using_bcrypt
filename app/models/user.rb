@@ -7,6 +7,7 @@ class User < ApplicationRecord
   #association
   has_many :auth_tokens
   has_many :posts
+  has_many :friends
 
   enum ac_status: {inactive: 0, active: 1}
 

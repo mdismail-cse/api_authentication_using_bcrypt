@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_09_07_053410) do
+ActiveRecord::Schema[7.0].define(version: 2023_09_07_094833) do
   create_table "auth_tokens", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "token"
     t.datetime "expire_at"
@@ -28,6 +28,15 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_07_053410) do
     t.datetime "updated_at", null: false
     t.index ["post_id"], name: "index_comments_on_post_id"
     t.index ["user_id"], name: "index_comments_on_user_id"
+  end
+
+  create_table "friends", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.integer "user_friend"
+    t.integer "status", default: 0
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_friends_on_user_id"
   end
 
   create_table "posts", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -51,5 +60,6 @@ ActiveRecord::Schema[7.0].define(version: 2023_09_07_053410) do
   add_foreign_key "auth_tokens", "users"
   add_foreign_key "comments", "posts"
   add_foreign_key "comments", "users"
+  add_foreign_key "friends", "users"
   add_foreign_key "posts", "users"
 end
